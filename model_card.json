@@ -1,0 +1,13 @@
+{
+    "model_name": "Digital Social Score v1.0",
+    "description": "Détection de propos toxiques dans un texte",
+    "risk_level": "Risque Limité (selon IA Act)",
+    "data_source": "train_toxic_10k.csv (Kaggle/Jigsaw)",
+    "privacy_measures": [
+      "Logs anonymisés",
+      "Aucun stockage des textes en entrée"
+    ],
+    "bias_detected": false,
+    "version": "1.0",
+    "last_update": "2025-11-10"
+  }

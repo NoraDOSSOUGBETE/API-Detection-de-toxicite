@@ -1,0 +1,1 @@
+# Centralise tous les composants MLOps : MLflow, Vertex AI, tracking, registry, etc.

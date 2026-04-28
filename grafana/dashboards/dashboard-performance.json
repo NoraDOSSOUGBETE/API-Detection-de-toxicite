@@ -1,0 +1,240 @@
+{
+  "title": "Performance & Model Health",
+  "tags": ["mlops", "performance", "latency"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "uid": "performance-mlops",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Latence Inference ML (P50/P95/P99)",
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(ml_processing_duration_seconds_bucket[5m]))",
+          "legendFormat": "P50",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(ml_processing_duration_seconds_bucket[5m]))",
+          "legendFormat": "P95",
+          "refId": "B",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(ml_processing_duration_seconds_bucket[5m]))",
+          "legendFormat": "P99",
+          "refId": "C",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }
+      ],
+      "options": {
+        "tooltip": {"mode": "multi"},
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean", "max"]}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "custom": {"lineWidth": 2, "fillOpacity": 15, "showPoints": "never"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 0.1, "color": "yellow"},
+              {"value": 0.2, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Latence HTTP End-to-End (P50/P95/P99)",
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "P50",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "P95",
+          "refId": "B",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "P99",
+          "refId": "C",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }
+      ],
+      "options": {
+        "tooltip": {"mode": "multi"},
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean", "max"]}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "custom": {"lineWidth": 2, "fillOpacity": 15, "showPoints": "never"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 0.2, "color": "yellow"},
+              {"value": 0.5, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Taux d'Erreur ML",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 10},
+      "targets": [{
+        "expr": "rate(ml_prediction_errors_total[5m]) * 100",
+        "refId": "A",
+        "datasource": {"uid": "PBFA97CFB590B2093"}
+      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 1, "color": "yellow"},
+              {"value": 5, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Requêtes en Cours",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 10},
+      "targets": [{
+        "expr": "http_requests_in_progress",
+        "refId": "A",
+        "datasource": {"uid": "PBFA97CFB590B2093"}
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 20, "color": "yellow"},
+              {"value": 50, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Latence P95 ML (ms)",
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 10},
+      "targets": [{
+        "expr": "histogram_quantile(0.95, rate(ml_processing_duration_seconds_bucket[5m])) * 1000",
+        "refId": "A",
+        "datasource": {"uid": "PBFA97CFB590B2093"}
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 100, "color": "yellow"},
+              {"value": 200, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Latence P95 HTTP (ms)",
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 10},
+      "targets": [{
+        "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) * 1000",
+        "refId": "A",
+        "datasource": {"uid": "PBFA97CFB590B2093"}
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 200, "color": "yellow"},
+              {"value": 500, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "heatmap",
+      "title": "Distribution de Confiance (Détection Drift)",
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 16},
+      "targets": [{
+        "expr": "ml_confidence_distribution_bucket",
+        "format": "heatmap",
+        "refId": "A",
+        "datasource": {"uid": "PBFA97CFB590B2093"}
+      }],
+      "options": {
+        "calculate": false,
+        "cellGap": 2,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Spectral",
+          "steps": 128
+        },
+        "yAxis": {
+          "decimals": 2,
+          "unit": "short"
+        }
+      }
+    }
+  ]
+}

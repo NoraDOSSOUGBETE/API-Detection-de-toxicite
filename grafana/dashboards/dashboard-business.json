@@ -1,0 +1,157 @@
+{
+  "title": "Business & Utilisation MLOps",
+  "tags": ["mlops", "business"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "uid": "business-mlops",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total Predictions",
+      "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "sum(ml_predictions_total)",
+        "refId": "A",
+        "datasource": {"uid": "PBFA97CFB590B2093"}
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 100, "color": "yellow"},
+              {"value": 1000, "color": "blue"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "gauge",
+      "title": "Taux de Toxicité",
+      "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+      "targets": [{
+        "expr": "sum(ml_predictions_total{result=\"toxic\"}) / sum(ml_predictions_total) * 100",
+        "refId": "A",
+        "datasource": {"uid": "PBFA97CFB590B2093"}
+      }],
+      "options": {
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 30, "color": "yellow"},
+              {"value": 50, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Model Status",
+      "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+      "targets": [{
+        "expr": "ml_model_status",
+        "refId": "A",
+        "datasource": {"uid": "PBFA97CFB590B2093"}
+      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}}},
+            {"type": "value", "options": {"1": {"text": "HEALTHY", "color": "green"}}}
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "red"},
+              {"value": 1, "color": "green"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "bargauge",
+      "title": "Volume/Heure",
+      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0},
+      "targets": [{
+        "expr": "sum(increase(ml_predictions_total[1h]))",
+        "refId": "A",
+        "datasource": {"uid": "PBFA97CFB590B2093"}
+      }],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 500, "color": "yellow"},
+              {"value": 1000, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Predictions par Classe",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 8},
+      "targets": [
+        {
+          "expr": "rate(ml_predictions_total{result=\"toxic\"}[5m])",
+          "legendFormat": "Toxic",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        },
+        {
+          "expr": "rate(ml_predictions_total{result=\"non_toxic\"}[5m])",
+          "legendFormat": "Non-Toxic",
+          "refId": "B",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }
+      ],
+      "options": {
+        "tooltip": {"mode": "multi"},
+        "legend": {"displayMode": "table", "placement": "bottom"}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {"lineWidth": 2, "fillOpacity": 20}
+        }
+      }
+    }
+  ]
+}

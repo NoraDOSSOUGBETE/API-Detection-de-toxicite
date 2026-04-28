@@ -1,0 +1,70 @@
+# Réentraînement automatique du modèle
+# Déclenché automatiquement quand des fichiers sont ajoutés dans gs://mlops-models-{PROJECT_ID}/data/
+
+steps:
+  # Étape 1: Installer les dépendances pour Vertex AI
+  - name: "python:3.11"
+    id: "install-dependencies"
+    entrypoint: "pip"
+    args:
+      - "install"
+      - "--no-cache-dir"
+      - "google-cloud-aiplatform"
+      - "kfp"
+      - "mlflow"
+      - "pandas"
+      - "scikit-learn"
+      - "datasets"
+      - "spacy"
+      - "google-cloud-storage"
+
+  # Étape 2: Télécharger le modèle spaCy (pour l'anonymisation)
+  - name: "python:3.11"
+    id: "download-spacy"
+    entrypoint: "python"
+    args: ["-m", "spacy", "download", "en_core_web_sm"]
+    waitFor: ["install-dependencies"]
+
+  # Étape 3: Lancer le pipeline Vertex AI
+  - name: "python:3.11"
+    id: "run-vertex-pipeline"
+    entrypoint: "python"
+    args: ["vertex.py"]
+    env:
+      - "PROJECT_ID=${PROJECT_ID}"
+      - "REGION=europe-west1"
+      - "VERTEX_MODE=integrated"
+    waitFor: ["download-spacy"]
+
+  # Étape 4: Vérifier que le modèle a été créé
+  - name: "gcr.io/cloud-builders/gsutil"
+    id: "verify-model"
+    args: ["ls", "-lh", "gs://mlops-models-${PROJECT_ID}/models/"]
+    waitFor: ["run-vertex-pipeline"]
+
+  # Étape 5: Afficher les résultats
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "display-results"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        echo "Réentraînement terminé"
+        echo "Nouveau modèle: gs://mlops-models-${PROJECT_ID}/models/svm_model_vertex.pkl"
+        echo "MLflow tracking: gs://mlops-models-${PROJECT_ID}/mlflow"
+        echo ""
+        echo "Prochaine étape: Redéployer l'API"
+        echo "gcloud builds submit --config=cloudbuild.yaml ."
+        echo ""
+    waitFor: ["verify-model"]
+
+# Options
+options:
+  machineType: "E2_HIGHCPU_8"
+  logging: CLOUD_LOGGING_ONLY
+
+# Timeout (1 heure max)
+timeout: "3600s"
+
+# Tags
+tags: ["retraining", "vertex-ai", "automated"]

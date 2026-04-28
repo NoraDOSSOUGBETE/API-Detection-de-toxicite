@@ -1,0 +1,257 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: default
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      # Prometheus - Metriques applicatives MLOps
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: true
+        jsonData:
+          timeInterval: 15s
+          
+      # Google Cloud Monitoring - Infrastructure GKE
+      - name: Cloud Monitoring
+        type: stackdriver
+        access: proxy
+        jsonData:
+          authenticationType: gce
+          defaultProject: simplifia-hackathon
+        editable: true
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-config
+  namespace: default
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'MLOps Dashboards'
+        orgId: 1
+        folder: 'MLOps'
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 30
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-mlops-dashboard
+  namespace: default
+data:
+  mlops-overview.json: |
+    {
+      "dashboard": {
+        "title": "MLOps - Toxic Detection Monitoring",
+        "timezone": "browser",
+        "schemaVersion": 16,
+        "version": 0,
+        "refresh": "10s",
+        "panels": [
+          {
+            "title": "Predictions par Classe (Business KPI)",
+            "type": "graph",
+            "datasource": "Prometheus",
+            "targets": [
+              {
+                "expr": "rate(ml_predictions_total{result=\"toxic\"}[5m])",
+                "legendFormat": "Toxic"
+              },
+              {
+                "expr": "rate(ml_predictions_total{result=\"non_toxic\"}[5m])",
+                "legendFormat": "Non-Toxic"
+              }
+            ],
+            "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}
+          },
+          {
+            "title": "Latence Inference ML (Performance)",
+            "type": "graph",
+            "datasource": "Prometheus",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(ml_processing_duration_seconds_bucket[5m]))",
+                "legendFormat": "P95"
+              },
+              {
+                "expr": "histogram_quantile(0.99, rate(ml_processing_duration_seconds_bucket[5m]))",
+                "legendFormat": "P99"
+              }
+            ],
+            "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}
+          },
+          {
+            "title": "Distribution de Confiance (Data Drift)",
+            "type": "heatmap",
+            "datasource": "Prometheus",
+            "targets": [
+              {
+                "expr": "rate(ml_confidence_distribution_bucket[5m])"
+              }
+            ],
+            "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}
+          },
+          {
+            "title": "Taux d'Erreurs ML",
+            "type": "graph",
+            "datasource": "Prometheus",
+            "targets": [
+              {
+                "expr": "rate(ml_prediction_errors_total[5m])",
+                "legendFormat": "{{error_type}}"
+              }
+            ],
+            "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}
+          },
+          {
+            "title": "CPU Pods (Infrastructure)",
+            "type": "graph",
+            "datasource": "Cloud Monitoring",
+            "targets": [
+              {
+                "expr": "kubernetes.io/container/cpu/core_usage_time"
+              }
+            ],
+            "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8}
+          },
+          {
+            "title": "Memoire Pods (Infrastructure)",
+            "type": "graph",
+            "datasource": "Cloud Monitoring",
+            "targets": [
+              {
+                "expr": "kubernetes.io/container/memory/used_bytes"
+              }
+            ],
+            "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8}
+          }
+        ]
+      }
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: default
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      serviceAccountName: grafana
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.2.2
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: "admin"
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: "admin123"
+            - name: GF_INSTALL_PLUGINS
+              value: "grafana-piechart-panel,grafana-clock-panel"
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboards-config
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+            - name: storage
+              mountPath: /var/lib/grafana
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 300m
+              memory: 512Mi
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+        - name: dashboards-config
+          configMap:
+            name: grafana-dashboards-config
+        - name: dashboards
+          configMap:
+            name: grafana-mlops-dashboard
+        - name: storage
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: default
+  labels:
+    app: grafana
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app: grafana
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana
+  namespace: default
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: grafana
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - pods
+      - services
+    verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: grafana
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: grafana
+subjects:
+  - kind: ServiceAccount
+    name: grafana
+    namespace: default

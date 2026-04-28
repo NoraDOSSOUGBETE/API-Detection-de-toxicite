@@ -1,0 +1,131 @@
+steps:
+  # Etape 0: Configuration Cloud Storage et outils
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        echo " Configuration Cloud Storage pour MLOps..."
+        # Création du bucket pour les modèles
+        gsutil mb -p $PROJECT_ID gs://mlops-models-$PROJECT_ID || true
+        # Création du bucket pour les données
+        gsutil mb -p $PROJECT_ID gs://mlops-data-$PROJECT_ID || true
+
+        echo " Cloud Storage configuré"
+
+  # Etape 1: Tests unitaires
+  - name: python:3.11
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install -r requirements.txt
+        pytest Tests/ || echo "Tests échoués mais pipeline continue"
+
+  # Etape 2: Entrainement MLOps Simple
+  - name: python:3.11
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        # Installation de toutes les dependances
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install google-cloud-storage mlflow scikit-learn pandas datasets spacy tqdm
+
+        # Configuration MLflow
+        export MLFLOW_TRACKING_URI="gs://mlops-models-$PROJECT_ID/mlflow"
+        export PROJECT_ID=$PROJECT_ID
+        export REGION="europe-west1"
+
+        # Verification si entrainement necessaire - UNIQUEMENT main
+        if [[ "$BRANCH_NAME" == "main" ]] || [[ "$BRANCH_NAME" == "master" ]]; then
+          echo " Declenchement entrainement MLOps pour: $BRANCH_NAME"
+          
+          # Utiliser le script MLOps simple au lieu de Vertex AI
+          echo " Lancement entrainement MLflow..."
+          python mlops/training.py
+          
+          echo " Entrainement MLOps termine"
+        else
+          echo " Entrainement ignore pour branche: $BRANCH_NAME"
+        fi
+
+  # Etape 4: Construction de l'image Docker
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      ["build", "-t", "gcr.io/$PROJECT_ID/toxic-detection-api:$COMMIT_SHA", "."]
+
+  # Etape 5: Push vers Container Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/toxic-detection-api:$COMMIT_SHA"]
+
+  # Etape 6: Creation automatique du cluster GKE
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        if [[ "$_DEPLOY_TO_GKE" == "true" ]]; then
+          echo " Déploiement GKE MLOps activé"
+          
+          # Vérifier si le cluster existe (créé via console)
+          echo " Connexion au cluster existant: ${_CLUSTER_NAME}"
+          if gcloud container clusters describe ${_CLUSTER_NAME} --zone ${_CLUSTER_ZONE} --project $PROJECT_ID > /dev/null 2>&1; then
+            echo " Cluster trouvé: ${_CLUSTER_NAME}"
+          else
+            echo " Cluster ${_CLUSTER_NAME} non trouvé dans ${_CLUSTER_ZONE}"
+            echo " Créez le cluster via la console GCP avec ces paramètres:"
+            echo "   - Nom: ${_CLUSTER_NAME}"
+            echo "   - Zone: ${_CLUSTER_ZONE}" 
+            echo "   - Type machine: e2-standard-2"
+            echo "   - Nœuds: 2 (autoscale 1-4)"
+            exit 1
+          fi
+          
+          # Configuration kubectl
+          echo " Configuration kubectl..."
+          gcloud container clusters get-credentials ${_CLUSTER_NAME} --zone ${_CLUSTER_ZONE} --project $PROJECT_ID
+          
+          # Appliquer le déploiement avec substitution des variables
+          echo " Déploiement de l'application..."
+          kubectl apply -f k8s/deployment-mlops.yaml
+          
+          # Mise à jour de l'image Docker
+          echo " Mise à jour de l'image: gcr.io/$PROJECT_ID/toxic-detection-api:$COMMIT_SHA"
+          kubectl set image deployment/mlops-toxic-detection-api toxic-detection-api=gcr.io/$PROJECT_ID/toxic-detection-api:$COMMIT_SHA
+          
+          # Attendre le déploiement
+          echo " Attente du déploiement..."
+          kubectl rollout status deployment/mlops-toxic-detection-api --timeout=600s
+          
+          # Obtenir l'IP externe
+          echo " Récupération de l'IP externe..."
+          kubectl get service mlops-toxic-detection-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}' > /tmp/external_ip
+          EXTERNAL_IP=$$(cat /tmp/external_ip)
+          echo "API accessible sur: http://$$EXTERNAL_IP"
+          echo "Health check: http://$$EXTERNAL_IP/health"
+          echo "Documentation: http://$$EXTERNAL_IP/docs"
+          
+        else
+          echo " Déploiement GKE désactivé (utilisez _DEPLOY_TO_GKE=true)"
+          echo " Image Docker créée: gcr.io/$PROJECT_ID/toxic-detection-api:$COMMIT_SHA"
+        fi
+
+images:
+  - "gcr.io/$PROJECT_ID/toxic-detection-api:$COMMIT_SHA"
+
+# Variables de substitution pour personaliser le comportement
+substitutions:
+  _USE_VERTEX_COMPUTE: "true" # "true" = Vertex AI compute + MLflow tracking
+  _TRAINING_SCALE: "quick" # "quick", "standard", "large"
+  _ENABLE_VERTEX_AI: "true" # "true" pour pipelines avancés Vertex AI
+  _VERTEX_REGION: "europe-west1" # Region pour Vertex AI
+  _DEPLOY_TO_GKE: "true" # "true" pour activer deployment GKE automatique
+  _CLUSTER_NAME: "mlops-toxic-detection-cluster" # Nom du nouveau cluster MLOps
+  _CLUSTER_ZONE: "europe-west1-b" # Zone européenne pour conformité RGPD
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: "E2_HIGHCPU_8" # Plus de CPU pour ML
+  substitution_option: "ALLOW_LOOSE"

@@ -1,0 +1,374 @@
+{
+  "dashboard": {
+    "title": "MLOps Toxic Detection - Complete Dashboard",
+    "tags": ["mlops", "toxic-detection", "production"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "type": "stat",
+        "title": "Total Predictions",
+        "gridPos": {"h": 6, "w": 4, "x": 0, "y": 0},
+        "targets": [{
+          "expr": "sum(ml_predictions_total)",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "orientation": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 100, "color": "yellow"},
+                {"value": 1000, "color": "blue"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "type": "gauge",
+        "title": "Taux de Toxicité",
+        "gridPos": {"h": 6, "w": 4, "x": 4, "y": 0},
+        "targets": [{
+          "expr": "sum(ml_predictions_total{result=\"toxic\"}) / sum(ml_predictions_total) * 100",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }],
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 30, "color": "yellow"},
+                {"value": 50, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "type": "stat",
+        "title": "Model Status",
+        "gridPos": {"h": 6, "w": 4, "x": 8, "y": 0},
+        "targets": [{
+          "expr": "ml_model_status",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}}},
+              {"type": "value", "options": {"1": {"text": "HEALTHY", "color": "green"}}}
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "type": "timeseries",
+        "title": "Predictions par Classe",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+        "targets": [
+          {
+            "expr": "rate(ml_predictions_total{result=\"toxic\"}[5m])",
+            "legendFormat": "Toxic",
+            "refId": "A",
+            "datasource": {"uid": "PBFA97CFB590B2093"}
+          },
+          {
+            "expr": "rate(ml_predictions_total{result=\"non_toxic\"}[5m])",
+            "legendFormat": "Non-Toxic",
+            "refId": "B",
+            "datasource": {"uid": "PBFA97CFB590B2093"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {"lineWidth": 2, "fillOpacity": 20}
+          }
+        }
+      },
+      {
+        "id": 5,
+        "type": "timeseries",
+        "title": "Latence Inference (P50/P95/P99)",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(ml_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "P50",
+            "refId": "A",
+            "datasource": {"uid": "PBFA97CFB590B2093"}
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(ml_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95",
+            "refId": "B",
+            "datasource": {"uid": "PBFA97CFB590B2093"}
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(ml_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "P99",
+            "refId": "C",
+            "datasource": {"uid": "PBFA97CFB590B2093"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {"lineWidth": 2},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 0.1, "color": "yellow"},
+                {"value": 0.2, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "type": "timeseries",
+        "title": "Memory Usage",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 14},
+        "targets": [{
+          "expr": "app_memory_usage_bytes / 1024 / 1024",
+          "legendFormat": "Memory MB",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "decmbytes",
+            "custom": {"lineWidth": 2, "fillOpacity": 10},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1024, "color": "yellow"},
+                {"value": 1536, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "type": "stat",
+        "title": "Error Rate",
+        "gridPos": {"h": 8, "w": 4, "x": 8, "y": 14},
+        "targets": [{
+          "expr": "rate(ml_prediction_errors_total[5m]) * 100",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1, "color": "yellow"},
+                {"value": 5, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 8,
+        "type": "heatmap",
+        "title": "Confidence Distribution",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+        "targets": [{
+          "expr": "ml_confidence_distribution_bucket",
+          "format": "heatmap",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }],
+        "options": {
+          "calculate": false,
+          "calculation": {},
+          "cellGap": 2,
+          "color": {
+            "mode": "scheme",
+            "scheme": "Spectral",
+            "steps": 128
+          },
+          "yAxis": {
+            "decimals": 2,
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "type": "timeseries",
+        "title": "CPU Usage (Cloud Monitoring)",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 22},
+        "targets": [{
+          "expr": "rate(container_cpu_usage_seconds_total{pod=~\"mlops-toxic-detection-api.*\"}[5m]) * 100",
+          "legendFormat": "{{pod}}",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "custom": {"lineWidth": 2, "fillOpacity": 10},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 70, "color": "yellow"},
+                {"value": 90, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 10,
+        "type": "bargauge",
+        "title": "Predictions Volume/Hour",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 22},
+        "targets": [{
+          "expr": "sum(increase(ml_predictions_total[1h]))",
+          "legendFormat": "Predictions/Hour",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "continuous-GrYlRd"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 500, "color": "yellow"},
+                {"value": 1000, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "type": "timeseries",
+        "title": "Prediction Confidence Trend",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 22},
+        "targets": [{
+          "expr": "avg(ml_confidence_distribution_sum / ml_confidence_distribution_count)",
+          "legendFormat": "Avg Confidence",
+          "refId": "A",
+          "datasource": {"uid": "PBFA97CFB590B2093"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "custom": {"lineWidth": 2, "fillOpacity": 20},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.6, "color": "yellow"},
+                {"value": 0.8, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "type": "timeseries",
+        "title": "HTTP Request Duration (End-to-End)",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 30},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P50",
+            "refId": "A",
+            "datasource": {"uid": "PBFA97CFB590B2093"}
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95",
+            "refId": "B",
+            "datasource": {"uid": "PBFA97CFB590B2093"}
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P99",
+            "refId": "C",
+            "datasource": {"uid": "PBFA97CFB590B2093"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {"lineWidth": 2, "fillOpacity": 10},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 0.2, "color": "yellow"},
+                {"value": 0.5, "color": "red"}
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "overwrite": true,
+  "folderId": 0
+}

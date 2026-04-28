@@ -1,0 +1,263 @@
+{
+  "title": "Infrastructure & Ressources",
+  "tags": ["mlops", "infrastructure", "resources"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "uid": "infrastructure-mlops",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Memory Usage (MB)",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "app_memory_usage_bytes / 1024 / 1024",
+          "legendFormat": "Memory MB",
+          "refId": "A",
+          "datasource": { "uid": "PBFA97CFB590B2093" }
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 1024, "color": "yellow" },
+              { "value": 1536, "color": "red" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "CPU Usage par Pod (%)",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{pod=~\"mlops-toxic-detection-api.*\"}[5m]) * 100",
+          "legendFormat": "{{pod}}",
+          "refId": "A",
+          "datasource": { "uid": "PBFA97CFB590B2093" }
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "mean", "max"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 70, "color": "yellow" },
+              { "value": 90, "color": "red" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Mémoire Actuelle",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 10 },
+      "targets": [
+        {
+          "expr": "app_memory_usage_bytes / 1024 / 1024",
+          "refId": "A",
+          "datasource": { "uid": "PBFA97CFB590B2093" }
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 1024, "color": "yellow" },
+              { "value": 1536, "color": "red" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "CPU Moyen",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 10 },
+      "targets": [
+        {
+          "expr": "avg(rate(container_cpu_usage_seconds_total{pod=~\"mlops-toxic-detection-api.*\"}[5m])) * 100",
+          "refId": "A",
+          "datasource": { "uid": "PBFA97CFB590B2093" }
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 70, "color": "yellow" },
+              { "value": 90, "color": "red" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Nombre de Pods",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 10 },
+      "targets": [
+        {
+          "expr": "count(up{job=\"mlops-toxic-detection-api\"})",
+          "refId": "A",
+          "datasource": { "uid": "PBFA97CFB590B2093" }
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "red" },
+              { "value": 1, "color": "yellow" },
+              { "value": 3, "color": "green" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Pods Actifs",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 10 },
+      "targets": [
+        {
+          "expr": "sum(up{job=\"mlops-toxic-detection-api\"})",
+          "refId": "A",
+          "datasource": { "uid": "PBFA97CFB590B2093" }
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "red" },
+              { "value": 1, "color": "yellow" },
+              { "value": 3, "color": "green" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Mémoire vs CPU (Corrélation)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "app_memory_usage_bytes / 1024 / 1024",
+          "legendFormat": "Memory (MB)",
+          "refId": "A",
+          "datasource": { "uid": "PBFA97CFB590B2093" }
+        },
+        {
+          "expr": "avg(rate(container_cpu_usage_seconds_total{pod=~\"mlops-toxic-detection-api.*\"}[5m])) * 100 * 10",
+          "legendFormat": "CPU (% x10)",
+          "refId": "B",
+          "datasource": { "uid": "PBFA97CFB590B2093" }
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "mean", "max"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "showPoints": "never" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Memory (MB)" },
+            "properties": [
+              { "id": "unit", "value": "decmbytes" },
+              {
+                "id": "color",
+                "value": { "mode": "fixed", "fixedColor": "blue" }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "CPU (% x10)" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              {
+                "id": "color",
+                "value": { "mode": "fixed", "fixedColor": "orange" }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
